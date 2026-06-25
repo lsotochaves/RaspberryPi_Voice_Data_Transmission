@@ -1,7 +1,6 @@
 import sounddevice as sd
 import RPi.GPIO as GPIO
-import numpy as np
-from scipy.signal import decimate
+import struct
 import time
 
 BUTTON_PIN = 17
@@ -22,27 +21,29 @@ try:
             print("Grabando...")
             raw_chunks = []
 
-            with sd.InputStream(samplerate=RECORD_RATE, channels=2, dtype='int32',
-                                device=1, blocksize=CHUNK) as stream:
-                while GPIO.input(BUTTON_PIN) == GPIO.LOW:
+            with sd.RawInputStream(samplerate=RECORD_RATE, channels=2, dtype='int32',
+                                   device=1, blocksize=CHUNK) as stream:
+                total = 0
+                while GPIO.input(BUTTON_PIN) == GPIO.LOW and total < MAX_BYTES:
                     data, _ = stream.read(CHUNK)
-                    raw_chunks.append(data[:, 0])  # Canal L (mono)
+                    raw_chunks.append(bytes(data))
+                    total += CHUNK // DOWNSAMPLE_FACTOR
 
-                    total_estimated = len(raw_chunks) * (CHUNK // DOWNSAMPLE_FACTOR)
-                    if total_estimated >= MAX_BYTES:
-                        print("Límite de buffer alcanzado")
-                        break
+            # Unir todos los chunks crudos
+            raw = b''.join(raw_chunks)
 
-            raw_audio = np.concatenate(raw_chunks)
-
-            # Downsample 48kHz -> 8kHz con filtro anti-aliasing
-            audio_8k = decimate(raw_audio, DOWNSAMPLE_FACTOR)
-
-            # Cuantizar int32 -> uint8 (0-255)
-            audio_8k = audio_8k / (2**31)           # Normalizar a [-1, 1]
-            audio_uint8 = ((audio_8k + 1) * 127.5).clip(0, 255).astype(np.uint8)
-
-            buffer = audio_uint8.tobytes()[:MAX_BYTES]
+            # Cada frame = 2 canales × 4 bytes (int32) = 8 bytes
+            # Tomar canal L, 1 de cada 6 frames
+            buffer = bytearray()
+            frame_size = 8  # 2 canales × 4 bytes
+            for i in range(0, len(raw), frame_size * DOWNSAMPLE_FACTOR):
+                if len(buffer) >= MAX_BYTES:
+                    break
+                sample_bytes = raw[i:i+4]  # Canal L (primeros 4 bytes del frame)
+                if len(sample_bytes) == 4:
+                    sample_int32 = struct.unpack('<i', sample_bytes)[0]
+                    sample_uint8 = (sample_int32 >> 24) + 128
+                    buffer.append(sample_uint8 & 0xFF)
 
             print(f"Grabación finalizada: {len(buffer)} bytes ({len(buffer) / TARGET_RATE:.1f} seg)")
 
