@@ -1,0 +1,4 @@
+spidev
+pyrf24
+gpiod
+sounddevice
