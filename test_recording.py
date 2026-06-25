@@ -19,7 +19,7 @@ try:
             buffer = bytearray()
 
             with sd.RawInputStream(samplerate=SAMPLE_RATE, channels=1, dtype='uint8',
-                                   device='plughw:1,0', blocksize=CHUNK) as stream:
+                                   device=1, blocksize=CHUNK) as stream:
                 while GPIO.input(BUTTON_PIN) == GPIO.LOW and len(buffer) < MAX_BYTES:
                     data, _ = stream.read(CHUNK)
                     buffer.extend(data)
