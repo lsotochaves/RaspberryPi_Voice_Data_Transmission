@@ -1,9 +1,13 @@
 import sounddevice as sd
 import RPi.GPIO as GPIO
+import numpy as np
+from scipy.signal import decimate
 import time
 
 BUTTON_PIN = 17
-SAMPLE_RATE = 8000
+RECORD_RATE = 48000
+TARGET_RATE = 8000
+DOWNSAMPLE_FACTOR = RECORD_RATE // TARGET_RATE  # 6
 MAX_BYTES = 480_000
 CHUNK = 1024
 
@@ -16,18 +20,31 @@ try:
     while True:
         if GPIO.input(BUTTON_PIN) == GPIO.LOW:
             print("Grabando...")
-            buffer = bytearray()
+            raw_chunks = []
 
-            with sd.RawInputStream(samplerate=SAMPLE_RATE, channels=1, dtype='uint8',
-                                   device=1, blocksize=CHUNK) as stream:
-                while GPIO.input(BUTTON_PIN) == GPIO.LOW and len(buffer) < MAX_BYTES:
+            with sd.InputStream(samplerate=RECORD_RATE, channels=2, dtype='int32',
+                                device=1, blocksize=CHUNK) as stream:
+                while GPIO.input(BUTTON_PIN) == GPIO.LOW:
                     data, _ = stream.read(CHUNK)
-                    buffer.extend(data)
+                    raw_chunks.append(data[:, 0])  # Canal L (mono)
 
-            if len(buffer) >= MAX_BYTES:
-                print(f"Límite alcanzado: {len(buffer)} bytes")
-            else:
-                print(f"Grabación finalizada: {len(buffer)} bytes ({len(buffer) / SAMPLE_RATE:.1f} seg)")
+                    total_estimated = len(raw_chunks) * (CHUNK // DOWNSAMPLE_FACTOR)
+                    if total_estimated >= MAX_BYTES:
+                        print("Límite de buffer alcanzado")
+                        break
+
+            raw_audio = np.concatenate(raw_chunks)
+
+            # Downsample 48kHz -> 8kHz con filtro anti-aliasing
+            audio_8k = decimate(raw_audio, DOWNSAMPLE_FACTOR)
+
+            # Cuantizar int32 -> uint8 (0-255)
+            audio_8k = audio_8k / (2**31)           # Normalizar a [-1, 1]
+            audio_uint8 = ((audio_8k + 1) * 127.5).clip(0, 255).astype(np.uint8)
+
+            buffer = audio_uint8.tobytes()[:MAX_BYTES]
+
+            print(f"Grabación finalizada: {len(buffer)} bytes ({len(buffer) / TARGET_RATE:.1f} seg)")
 
         time.sleep(0.01)
 
