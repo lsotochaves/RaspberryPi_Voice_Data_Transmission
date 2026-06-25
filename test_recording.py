@@ -1,6 +1,7 @@
 import sounddevice as sd
 import RPi.GPIO as GPIO
 import struct
+import wave
 import time
 
 BUTTON_PIN = 17
@@ -46,6 +47,13 @@ try:
                     buffer.append(sample_uint8 & 0xFF)
 
             print(f"Grabación finalizada: {len(buffer)} bytes ({len(buffer) / TARGET_RATE:.1f} seg)")
+
+            with wave.open("test.wav", "wb") as wf:
+                wf.setnchannels(1)
+                wf.setsampwidth(1)
+                wf.setframerate(TARGET_RATE)
+                wf.writeframes(buffer)
+            print("Guardado como test.wav")
 
         time.sleep(0.01)
 
