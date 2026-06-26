@@ -24,6 +24,16 @@ Sistema portátil de comunicación inalámbrica de voz entre dos dispositivos au
 | CSN | CE0 (spidev0.0) |
 | SPI | Bus SPI (habilitado en config.txt) |
 
+### Configuración de radio NRF24L01
+
+| Parámetro | Valor | Nota |
+|---|---|---|
+| PA Level | RF24_PA_LOW | Cambiar a RF24_PA_MAX para alcance final |
+| Data Rate | RF24_1MBPS | |
+| Canal | 76 | |
+| Dirección | `b"1Node"` | Debe coincidir en TX y RX |
+| Payload | 32 bytes | Fijo, coincide con tamaño del paquete |
+
 ### Botón
 
 - GPIO17 → un extremo del botón
@@ -97,10 +107,11 @@ SEQ = `0xFFFF` está reservado para señalar el fin del mensaje. Garantiza que n
 4. Mientras botón presionado: grabar audio en chunks con sounddevice
 5. Verificar límite de 480,000 bytes durante grabación
 6. Al soltar el botón (o alcanzar el límite): detener grabación
-7. Dividir buffer en chunks de 24 bytes
-8. Construir paquetes [START][SEQ_H][SEQ_L][LEN][DATOS][CRC]
-9. Enviar paquetes secuencialmente
-10. Enviar trama de fin (SEQ = 0xFFFF)
+7. Procesar audio: promediar ventanas de 6 muestras (decimación con filtro)
+8. Dividir buffer en chunks de 27 bytes
+9. Construir todos los paquetes [START][SEQ_H][SEQ_L][LEN][DATOS][CRC]
+10. Enviar paquetes secuencialmente (delay configurable)
+11. Enviar trama de fin (SEQ = 0xFFFF)
 
 ### Receptor
 
@@ -150,8 +161,7 @@ pip install -r requirements.txt
 - [x] SPI habilitado y verificado
 - [x] I2S y micrófono INMP441 funcional (ALSA)
 - [x] NRF24L01 receptor básico funcional
-- [x] Botón GPIO17 funcional (gpiod)
+- [x] Botón GPIO17 funcional (RPi.GPIO)
 - [x] Protocolo de paquetes definido
-- [ ] Grabación con límite de buffer
-- [ ] Empaquetado y transmisión
+- [x] Transmisor implementado (grabación, procesamiento, empaquetado, envío)
 - [ ] Recepción, verificación y reproducción

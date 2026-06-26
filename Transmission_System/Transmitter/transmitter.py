@@ -3,7 +3,7 @@ import time
 
 import RPi.GPIO as GPIO
 import sounddevice as sd
-from pyrf24 import RF24, RF24_PA_MAX, RF24_250KBPS
+from pyrf24 import RF24, RF24_PA_LOW, RF24_1MBPS
 
 # ── Audio parameters ──
 RECORD_RATE = 48000
@@ -20,7 +20,7 @@ LED_TRANSMITTING_PIN = None  # TODO: set actual pin
 # ── Radio ──
 RADIO_CE_PIN = 25
 RADIO_CSN_PIN = 0  # spidev0.0
-TX_ADDRESS = b"\xe7\xe7\xe7\xe7\xe7"
+TX_ADDRESS = b"1Node"
 
 # ── Protocol ──
 START_BYTE = 0xAA
@@ -39,10 +39,10 @@ def init_radio():
     radio = RF24(RADIO_CE_PIN, RADIO_CSN_PIN)
     if not radio.begin():
         raise RuntimeError("NRF24L01 not responding")
-    radio.setPALevel(RF24_PA_MAX)
-    radio.setDataRate(RF24_250KBPS)
+    radio.setPALevel(RF24_PA_LOW)
+    radio.setDataRate(RF24_1MBPS)
     radio.setPayloadSize(PACKET_SIZE)
-    radio.setChannel(100)
+    radio.setChannel(76)
     radio.openWritingPipe(TX_ADDRESS)
     radio.stopListening()
     return radio
