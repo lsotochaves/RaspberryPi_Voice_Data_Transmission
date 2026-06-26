@@ -60,7 +60,7 @@ Dispositivo ALSA: `plughw:1,0`
 
 ## Protocolo de transmisión
 
-### Formato del paquete (29 bytes)
+### Formato del paquete (32 bytes)
 
 ```
 [START][SEQ_HIGH][SEQ_LOW][LEN][DATOS][CRC]
@@ -82,7 +82,7 @@ SEQ = `0xFFFF` está reservado para señalar el fin del mensaje. Garantiza que n
 
 ### Límites de secuencia
 
-- Paquetes máximos por mensaje: 17,778 (480,000 ÷ 27)
+- Paquetes máximos por mensaje: 17,778 (ceil(480,000 ÷ 27))
 - SEQ máximo utilizado: ~0x4E20, muy por debajo de 0xFFFF
 
 ---
@@ -92,7 +92,7 @@ SEQ = `0xFFFF` está reservado para señalar el fin del mensaje. Garantiza que n
 ### Transmisor
 
 1. Inicializar NRF24L01 (pyrf24)
-2. Inicializar botón GPIO17 (gpiod, pull-up)
+2. Inicializar botón GPIO17 (RPi.GPIO, pull-up)
 3. Esperar botón presionado
 4. Mientras botón presionado: grabar audio en chunks con sounddevice
 5. Verificar límite de 480,000 bytes durante grabación
@@ -114,12 +114,26 @@ SEQ = `0xFFFF` está reservado para señalar el fin del mensaje. Garantiza que n
 
 ---
 
+## Estructura del proyecto
+
+```
+RaspberryPi_Voice_Data_Transmission/
+├── Transmission_System/
+│   └── Transmitter/
+│       └── transmitter.py  # Transmisor: grabación, procesamiento, empaquetado y envío
+├── Modular_Tests/
+│   ├── test_recording.py   # Prueba de grabación: captura a 48 kHz, decimación ×6 a 8 kHz, guarda test.wav
+│   └── channel_test.py     # Prueba del canal de audio ALSA (INMP441)
+```
+
+---
+
 ## Dependencias
 
 ```
 spidev
 pyrf24
-gpiod
+RPi.GPIO
 sounddevice
 ```
 
