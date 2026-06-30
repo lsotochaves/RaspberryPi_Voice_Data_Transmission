@@ -1,0 +1,13 @@
+[Unit]
+Description=Voice Transmitter (NRF24L01 + INMP441)
+After=network.target
+
+[Service]
+ExecStart=/home/transmisor/nrf24_env/bin/python3 /home/transmisor/proyecto/RaspberryPi_Voice_Data_Transmission/Transmission_System/transmitter.py
+WorkingDirectory=/home/transmisor/proyecto/RaspberryPi_Voice_Data_Transmission/Transmission_System
+User=transmisor
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

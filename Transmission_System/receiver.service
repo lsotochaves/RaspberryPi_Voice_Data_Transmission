@@ -1,0 +1,13 @@
+[Unit]
+Description=Voice Receiver (NRF24L01)
+After=network.target
+
+[Service]
+ExecStart=/home/receptor/nrf24_env/bin/python3 /home/receptor/proyecto/RaspberryPi_Voice_Data_Transmission/Transmission_System/receiver.py
+WorkingDirectory=/home/receptor/proyecto/RaspberryPi_Voice_Data_Transmission/Transmission_System
+User=receptor
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
