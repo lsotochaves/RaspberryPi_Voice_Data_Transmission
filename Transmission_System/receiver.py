@@ -1,4 +1,5 @@
 import struct
+import subprocess
 import time
 
 import RPi.GPIO as GPIO
@@ -167,6 +168,22 @@ def save_audio(pcm_data, filename="received_audio.wav"):
     print(f"Saved {duration:.1f}s of audio to {filename}")
 
 
+def find_playback_device():
+    result = subprocess.run(["aplay", "-l"], capture_output=True, text=True)
+    for line in result.stdout.splitlines():
+        if "hifiberry" in line.lower():
+            card = line.split(":")[0].replace("card ", "").strip()
+            return f"plughw:{card},0"
+    raise RuntimeError("PCM5102A (hifiberry) not found")
+
+
+def play_audio(filename="received_audio.wav"):
+    device = find_playback_device()
+    print(f"Playing {filename} on {device}...")
+    subprocess.run(["aplay", "-D", device, filename])
+    print("Playback complete")
+
+
 # ──────────────────────────────────────────────
 #  Main
 # ──────────────────────────────────────────────
@@ -186,6 +203,7 @@ def main():
             if pcm_data:
                 print(f"Reconstructed {len(pcm_data)} bytes ({len(pcm_data) / TARGET_RATE:.1f}s)")
                 save_audio(pcm_data)
+                play_audio()
                 led_blink_times(5)
 
     except KeyboardInterrupt:
