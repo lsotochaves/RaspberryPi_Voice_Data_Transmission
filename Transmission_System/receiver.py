@@ -9,8 +9,7 @@ TARGET_RATE = 8000
 MAX_AUDIO_BYTES = 480_000
 
 # ── GPIO ──
-LED_RECEIVING_PIN = None  # TODO: set actual pin
-LED_PLAYING_PIN = None  # TODO: set actual pin
+LED_PIN = 26
 
 # ── Radio ──
 RADIO_CE_PIN = 25
@@ -43,29 +42,18 @@ def init_radio():
     return radio
 
 
-def init_leds():
+def init_led():
     GPIO.setmode(GPIO.BCM)
-    if LED_RECEIVING_PIN is not None:
-        GPIO.setup(LED_RECEIVING_PIN, GPIO.OUT)
-        GPIO.output(LED_RECEIVING_PIN, GPIO.LOW)
-    if LED_PLAYING_PIN is not None:
-        GPIO.setup(LED_PLAYING_PIN, GPIO.OUT)
-        GPIO.output(LED_PLAYING_PIN, GPIO.LOW)
+    GPIO.setup(LED_PIN, GPIO.OUT)
+    GPIO.output(LED_PIN, GPIO.HIGH)
 
 
-# ──────────────────────────────────────────────
-#  LED helpers
-# ──────────────────────────────────────────────
-
-
-def led_receiving(state):
-    if LED_RECEIVING_PIN is not None:
-        GPIO.output(LED_RECEIVING_PIN, GPIO.HIGH if state else GPIO.LOW)
-
-
-def led_playing(state):
-    if LED_PLAYING_PIN is not None:
-        GPIO.output(LED_PLAYING_PIN, GPIO.HIGH if state else GPIO.LOW)
+def led_blink_times(n=5, interval=0.2):
+    for _ in range(n):
+        GPIO.output(LED_PIN, GPIO.LOW)
+        time.sleep(interval)
+        GPIO.output(LED_PIN, GPIO.HIGH)
+        time.sleep(interval)
 
 
 # ──────────────────────────────────────────────
@@ -108,7 +96,6 @@ def receive_message(radio):
     packets_received = 0
     crc_errors = 0
 
-    led_receiving(True)
     print("Waiting for transmission...")
 
     while True:
@@ -129,7 +116,6 @@ def receive_message(radio):
                 buffer[seq] = data
                 packets_received += 1
 
-    led_receiving(False)
     print(f"Received {packets_received} packets ({crc_errors} CRC errors)")
     return buffer
 
@@ -188,7 +174,7 @@ def save_audio(pcm_data, filename="received_audio.wav"):
 
 def main():
     radio = init_radio()
-    init_leds()
+    init_led()
 
     print("Receiver ready. Listening for messages.")
 
@@ -200,6 +186,7 @@ def main():
             if pcm_data:
                 print(f"Reconstructed {len(pcm_data)} bytes ({len(pcm_data) / TARGET_RATE:.1f}s)")
                 save_audio(pcm_data)
+                led_blink_times(5)
 
     except KeyboardInterrupt:
         print("\nShutting down...")

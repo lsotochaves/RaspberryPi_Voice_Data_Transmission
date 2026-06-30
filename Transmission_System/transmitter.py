@@ -1,4 +1,5 @@
 import struct
+import threading
 import time
 
 import RPi.GPIO as GPIO
@@ -14,8 +15,7 @@ CHUNK = 1024
 
 # ── GPIO ──
 BUTTON_PIN = 17
-LED_RECORDING_PIN = None  # TODO: set actual pin
-LED_TRANSMITTING_PIN = None  # TODO: set actual pin
+LED_PIN = 26
 
 # ── Radio ──
 RADIO_CE_PIN = 25
@@ -53,28 +53,17 @@ def init_button():
     GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 
-def init_leds():
-    if LED_RECORDING_PIN is not None:
-        GPIO.setup(LED_RECORDING_PIN, GPIO.OUT)
-        GPIO.output(LED_RECORDING_PIN, GPIO.LOW)
-    if LED_TRANSMITTING_PIN is not None:
-        GPIO.setup(LED_TRANSMITTING_PIN, GPIO.OUT)
-        GPIO.output(LED_TRANSMITTING_PIN, GPIO.LOW)
+def init_led():
+    GPIO.setup(LED_PIN, GPIO.OUT)
+    GPIO.output(LED_PIN, GPIO.HIGH)
 
 
-# ──────────────────────────────────────────────
-#  LED helpers
-# ──────────────────────────────────────────────
-
-
-def led_recording(state):
-    if LED_RECORDING_PIN is not None:
-        GPIO.output(LED_RECORDING_PIN, GPIO.HIGH if state else GPIO.LOW)
-
-
-def led_transmitting(state):
-    if LED_TRANSMITTING_PIN is not None:
-        GPIO.output(LED_TRANSMITTING_PIN, GPIO.HIGH if state else GPIO.LOW)
+def _blink_loop(stop_event, interval=0.15):
+    while not stop_event.is_set():
+        GPIO.output(LED_PIN, GPIO.LOW)
+        stop_event.wait(interval)
+        GPIO.output(LED_PIN, GPIO.HIGH)
+        stop_event.wait(interval)
 
 
 # ──────────────────────────────────────────────
@@ -179,26 +168,32 @@ def transmit(radio, packets):
 def main():
     radio = init_radio()
     init_button()
-    init_leds()
+    init_led()
 
     print("Transmitter ready. Hold button to record.")
 
     try:
         while True:
             if GPIO.input(BUTTON_PIN) == GPIO.LOW:
-                led_recording(True)
                 print("Recording...")
+                blink_stop = threading.Event()
+                blink_thread = threading.Thread(target=_blink_loop, args=(blink_stop,))
+                blink_thread.start()
 
                 raw = record_audio()
-                led_recording(False)
+                blink_stop.set()
+                blink_thread.join()
 
                 audio = process_audio(raw)
                 print(f"Recorded {len(audio)} bytes ({len(audio) / TARGET_RATE:.1f}s)")
 
-                led_transmitting(True)
+                GPIO.output(LED_PIN, GPIO.HIGH)
                 packets = build_all_packets(audio)
                 transmit(radio, packets)
-                led_transmitting(False)
+
+                GPIO.output(LED_PIN, GPIO.LOW)
+                time.sleep(3)
+                GPIO.output(LED_PIN, GPIO.HIGH)
 
             time.sleep(0.01)
 
