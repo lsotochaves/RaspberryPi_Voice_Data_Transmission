@@ -130,8 +130,8 @@ SEQ = `0xFFFF` está reservado para señalar el fin del mensaje. Garantiza que n
 ```
 RaspberryPi_Voice_Data_Transmission/
 ├── Transmission_System/
-│   └── Transmitter/
-│       └── transmitter.py  # Transmisor: grabación, procesamiento, empaquetado y envío
+│   ├── transmitter.py  # Transmisor: grabación, procesamiento, empaquetado y envío
+│   └── receiver.py     # Receptor: recepción, verificación CRC, reconstrucción y reproducción
 ├── Modular_Tests/
 │   ├── test_recording.py   # Prueba de grabación: captura a 48 kHz, decimación ×6 a 8 kHz, guarda test.wav
 │   └── channel_test.py     # Prueba del canal de audio ALSA (INMP441)
@@ -164,4 +164,5 @@ pip install -r requirements.txt
 - [x] Botón GPIO17 funcional (RPi.GPIO)
 - [x] Protocolo de paquetes definido
 - [x] Transmisor implementado (grabación, procesamiento, empaquetado, envío)
-- [ ] Recepción, verificación y reproducción
+- [x] Receptor implementado (recepción, verificación CRC, reconstrucción, reproducción tentativa)
+- [ ] Configurar salida de audio por Bluetooth

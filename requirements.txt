@@ -1,3 +1,4 @@
 spidev
 pyrf24
+RPi.GPIO
 sounddevice
