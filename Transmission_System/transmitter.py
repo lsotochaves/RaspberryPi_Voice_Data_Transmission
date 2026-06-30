@@ -82,12 +82,19 @@ def led_transmitting(state):
 # ──────────────────────────────────────────────
 
 
+def find_input_device():
+    for i, dev in enumerate(sd.query_devices()):
+        if "googlevoicehat" in dev["name"].lower() and dev["max_input_channels"] > 0:
+            return i
+    raise RuntimeError("INMP441 (googlevoicehat) not found")
+
+
 def record_audio():
     raw_chunks = []
     total = 0
 
     with sd.RawInputStream(
-        samplerate=RECORD_RATE, channels=2, dtype="int32", device=1, blocksize=CHUNK
+        samplerate=RECORD_RATE, channels=2, dtype="int32", device=find_input_device(), blocksize=CHUNK
     ) as stream:
         while GPIO.input(BUTTON_PIN) == GPIO.LOW and total < MAX_AUDIO_BYTES:
             data, _ = stream.read(CHUNK)
