@@ -164,33 +164,21 @@ def reconstruct_audio(buffer):
 # ──────────────────────────────────────────────
 
 
-def play_audio(pcm_data):
-    """
-    Reproduce audio PCM unsigned 8-bit a 8 kHz.
-
-    TODO: configurar salida Bluetooth (PulseAudio/PipeWire).
-    Por ahora se usa sounddevice con el dispositivo por defecto.
-    Cuando Bluetooth esté configurado, el sink de audio del sistema
-    apuntará al dispositivo BT y esta función funcionará sin cambios.
-    """
+def save_audio(pcm_data, filename="received_audio.wav"):
     if not pcm_data:
-        print("No audio to play")
+        print("No audio to save")
         return
 
-    import array
-    import sounddevice as sd
+    import wave
 
-    samples = array.array('f', [(b - 128) / 128.0 for b in pcm_data])
+    with wave.open(filename, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(1)
+        wf.setframerate(TARGET_RATE)
+        wf.writeframes(pcm_data)
 
-    led_playing(True)
-    duration = len(samples) / TARGET_RATE
-    print(f"Playing {duration:.1f}s of audio...")
-
-    sd.play(samples, samplerate=TARGET_RATE, blocksize=1024)
-    sd.wait()
-
-    led_playing(False)
-    print("Playback complete")
+    duration = len(pcm_data) / TARGET_RATE
+    print(f"Saved {duration:.1f}s of audio to {filename}")
 
 
 # ──────────────────────────────────────────────
@@ -211,7 +199,7 @@ def main():
 
             if pcm_data:
                 print(f"Reconstructed {len(pcm_data)} bytes ({len(pcm_data) / TARGET_RATE:.1f}s)")
-                play_audio(pcm_data)
+                save_audio(pcm_data)
 
     except KeyboardInterrupt:
         print("\nShutting down...")
