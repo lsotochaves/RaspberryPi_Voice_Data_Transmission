@@ -203,8 +203,8 @@ def main():
             if pcm_data:
                 print(f"Reconstructed {len(pcm_data)} bytes ({len(pcm_data) / TARGET_RATE:.1f}s)")
                 save_audio(pcm_data)
-                play_audio()
                 led_blink_times(5)
+                play_audio()
 
     except KeyboardInterrupt:
         print("\nShutting down...")
