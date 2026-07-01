@@ -3,7 +3,7 @@ import subprocess
 import time
 
 import RPi.GPIO as GPIO
-from pyrf24 import RF24, RF24_PA_LOW, RF24_1MBPS
+from pyrf24 import RF24, RF24_PA_MAX, RF24_1MBPS
 
 # ── Audio parameters ──
 TARGET_RATE = 8000
@@ -34,7 +34,7 @@ def init_radio():
     radio = RF24(RADIO_CE_PIN, RADIO_CSN_PIN)
     if not radio.begin():
         raise RuntimeError("NRF24L01 not responding")
-    radio.setPALevel(RF24_PA_LOW)
+    radio.setPALevel(RF24_PA_MAX)
     radio.setDataRate(RF24_1MBPS)
     radio.setPayloadSize(PACKET_SIZE)
     radio.setChannel(76)
