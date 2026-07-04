@@ -5,19 +5,19 @@ import time
 import RPi.GPIO as GPIO
 from pyrf24 import RF24, RF24_PA_MAX, RF24_1MBPS
 
-# ── Audio parameters ──
+# Audio parameters
 TARGET_RATE = 8000
 MAX_AUDIO_BYTES = 480_000
 
-# ── GPIO ──
+# GPIO
 LED_PIN = 26
 
-# ── Radio ──
+# Radio
 RADIO_CE_PIN = 25
 RADIO_CSN_PIN = 0  # spidev0.0
 RX_ADDRESS = b"1Node"
 
-# ── Protocol ──
+# Protocol
 START_BYTE = 0xAA
 PAYLOAD_SIZE = 27
 PACKET_SIZE = 32
@@ -25,12 +25,8 @@ SEQ_END = 0xFFFF
 MAX_PACKETS = 17_778
 
 
-# ──────────────────────────────────────────────
-#  Initialization
-# ──────────────────────────────────────────────
-
-
 def init_radio():
+    """Initialize the NRF24L01 radio in receive mode."""
     radio = RF24(RADIO_CE_PIN, RADIO_CSN_PIN)
     if not radio.begin():
         raise RuntimeError("NRF24L01 not responding")
@@ -44,12 +40,14 @@ def init_radio():
 
 
 def init_led():
+    """Configure the status LED on GPIO26."""
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(LED_PIN, GPIO.OUT)
     GPIO.output(LED_PIN, GPIO.HIGH)
 
 
 def led_blink_times(n=5, interval=0.2):
+    """Blink the LED n times to signal message received."""
     for _ in range(n):
         GPIO.output(LED_PIN, GPIO.LOW)
         time.sleep(interval)
@@ -57,12 +55,8 @@ def led_blink_times(n=5, interval=0.2):
         time.sleep(interval)
 
 
-# ──────────────────────────────────────────────
-#  Packet parsing and validation
-# ──────────────────────────────────────────────
-
-
 def verify_crc(packet):
+    """Verify the CRC byte of a 32-byte packet."""
     crc_sum = 0
     for b in packet[:31]:
         crc_sum += b
@@ -70,6 +64,7 @@ def verify_crc(packet):
 
 
 def parse_packet(packet):
+    """Parse and validate a packet, return (seq, data) or None."""
     if len(packet) != PACKET_SIZE:
         return None
     if packet[0] != START_BYTE:
@@ -87,12 +82,8 @@ def parse_packet(packet):
     return seq, data
 
 
-# ──────────────────────────────────────────────
-#  Reception
-# ──────────────────────────────────────────────
-
-
 def receive_message(radio):
+    """Receive packets until end frame, return ordered buffer."""
     buffer = {}
     packets_received = 0
     crc_errors = 0
@@ -121,12 +112,8 @@ def receive_message(radio):
     return buffer
 
 
-# ──────────────────────────────────────────────
-#  Audio reconstruction
-# ──────────────────────────────────────────────
-
-
 def reconstruct_audio(buffer):
+    """Rebuild the PCM audio stream from received packets."""
     if not buffer:
         return b""
 
@@ -146,12 +133,8 @@ def reconstruct_audio(buffer):
     return bytes(audio)
 
 
-# ──────────────────────────────────────────────
-#  Playback (Bluetooth – tentative)
-# ──────────────────────────────────────────────
-
-
 def save_audio(pcm_data, filename="received_audio.wav"):
+    """Save PCM data as a WAV file."""
     if not pcm_data:
         print("No audio to save")
         return
@@ -169,6 +152,7 @@ def save_audio(pcm_data, filename="received_audio.wav"):
 
 
 def find_playback_device():
+    """Return the ALSA device string for the PCM5102A DAC."""
     result = subprocess.run(["aplay", "-l"], capture_output=True, text=True)
     for line in result.stdout.splitlines():
         if "hifiberry" in line.lower():
@@ -178,18 +162,15 @@ def find_playback_device():
 
 
 def play_audio(filename="received_audio.wav"):
+    """Play a WAV file through the DAC."""
     device = find_playback_device()
     print(f"Playing {filename} on {device}...")
     subprocess.run(["aplay", "-D", device, filename])
     print("Playback complete")
 
 
-# ──────────────────────────────────────────────
-#  Main
-# ──────────────────────────────────────────────
-
-
 def main():
+    """Main loop: listen, reconstruct and play received audio."""
     radio = init_radio()
     init_led()
 

@@ -1,0 +1,7 @@
+# Artifacts
+*.wav
+*.zip
+
+# Python
+__pycache__/
+*.pyc
